@@ -1,0 +1,56 @@
+[
+  {
+    "trigger": {
+      "url-filter": ".*doubleclick\\.net/.*",
+      "resource-type": ["script", "image", "raw", "media"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*googlesyndication\\.com/.*",
+      "resource-type": ["script", "image", "raw"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*googleadservices\\.com/.*",
+      "resource-type": ["script", "image", "raw"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*pagead2\\.googlesyndication\\.com/.*",
+      "resource-type": ["script", "raw", "document"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/api/stats/ads.*",
+      "resource-type": ["raw", "script"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/pagead/.*",
+      "resource-type": ["raw", "script", "image"]
+    },
+    "action": {
+      "type": "block"
+    }
+  }
+]

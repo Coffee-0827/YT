@@ -1,0 +1,9 @@
+{
+  "name": "ios-web-media-enhancer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS 網頁影音增強與廣告過濾工具（Safari Web Extension + SwiftUI WKWebView App）",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

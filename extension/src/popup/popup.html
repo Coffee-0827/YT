@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>網頁影音增強與廣告過濾</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="panel">
+    <header class="header">
+      <h1>影音增強器</h1>
+      <span class="badge" id="statusBadge">運作中</span>
+    </header>
+
+    <section class="stats-card">
+      <div class="stat-label">本頁已過濾廣告元素</div>
+      <div class="stat-value" id="hiddenCount">0</div>
+    </section>
+
+    <section class="toggles">
+      <label class="toggle-row">
+        <span>隱藏網頁廣告元素</span>
+        <input type="checkbox" id="adFilterEnabled" />
+      </label>
+
+      <label class="toggle-row">
+        <span>自動略過廣告按鈕</span>
+        <input type="checkbox" id="autoSkipEnabled" />
+      </label>
+
+      <label class="toggle-row">
+        <span>背景音訊與鎖屏控制</span>
+        <input type="checkbox" id="backgroundPlayEnabled" />
+      </label>
+    </section>
+
+    <button id="pipButton" class="primary-btn" type="button">
+      切換子母畫面 (PiP)
+    </button>
+    <p id="feedback" class="feedback" aria-live="polite"></p>
+  </main>
+
+  <script src="../shared/browser-api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

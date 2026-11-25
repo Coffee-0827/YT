@@ -1,0 +1,7 @@
+node_modules/
+ios/build/
+ios/MediaEnhancer.xcodeproj/
+ios/Payload/
+ios/*.ipa
+.DS_Store
+Thumbs.db

@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "網頁影音增強與廣告過濾",
+  "short_name": "影音增強",
+  "version": "1.0.0",
+  "description": "隱藏網頁影音廣告元素，並增強 HTML5 影片的背景音訊播放、子母畫面與鎖屏媒體控制體驗。",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "網頁影音增強與廣告過濾"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": [
+        "src/shared/browser-api.js",
+        "src/rules/ad-selectors.js",
+        "src/content/ad-filter.js",
+        "src/content/media-enhancer.js",
+        "src/content/main.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
+}
