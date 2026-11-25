@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 
 /// Wraps WKWebView with media playback capabilities and injected enhancement scripts.
+/// The view fills the entire screen edge-to-edge including under the status bar and home indicator.
 struct WebPlayerView: UIViewRepresentable {
     @ObservedObject var viewModel: WebPlayerViewModel
 
@@ -18,7 +19,6 @@ struct WebPlayerView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.allowsPictureInPictureMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
-        config.applicationNameForUserAgent = "Version/26.0 Mobile/15E148 Safari/604.1"
 
         let controller = WKUserContentController()
         controller.add(viewModel, name: "mediaState")
@@ -37,7 +37,22 @@ struct WebPlayerView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
-        webView.scrollView.contentInsetAdjustmentBehavior = .automatic
+
+        // KEY: Tell the scroll view NOT to auto-adjust insets.
+        // This lets the web content fill under the status bar and home indicator
+        // exactly like the native YouTube app.
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+
+        // Extend the webView drawing under the system chrome so the page
+        // background colour reaches the edges rather than leaving black bars.
+        webView.isOpaque = false
+        webView.backgroundColor = .black
+
+        // Proper mobile Safari UA so YouTube serves the full mobile layout
+        webView.customUserAgent =
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) " +
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
+            "Version/18.0 Mobile/15E148 Safari/604.1"
 
         viewModel.webView = webView
         viewModel.loadCurrentURL()
