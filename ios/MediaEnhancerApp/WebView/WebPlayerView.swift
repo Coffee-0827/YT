@@ -18,6 +18,7 @@ struct WebPlayerView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.allowsPictureInPictureMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        config.applicationNameForUserAgent = "Version/26.0 Mobile/15E148 Safari/604.1"
 
         let controller = WKUserContentController()
         controller.add(viewModel, name: "mediaState")
@@ -36,8 +37,7 @@ struct WebPlayerView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
-        webView.customUserAgent =
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+        webView.scrollView.contentInsetAdjustmentBehavior = .automatic
 
         viewModel.webView = webView
         viewModel.loadCurrentURL()

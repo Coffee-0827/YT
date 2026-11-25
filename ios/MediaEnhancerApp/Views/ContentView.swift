@@ -3,41 +3,57 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = WebPlayerViewModel()
     @State private var showGuide = false
+    @State private var showControlsBar = true
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                addressBar
+        VStack(spacing: 0) {
+            if showControlsBar {
+                compactToolbar
                 statusStrip
+            }
+
+            ZStack(alignment: .topTrailing) {
                 WebPlayerView(viewModel: viewModel)
                     .ignoresSafeArea(edges: .bottom)
-            }
-            .navigationTitle("影音增強瀏覽器")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+
+                if !showControlsBar {
                     Button {
-                        showGuide = true
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showControlsBar = true
+                        }
                     } label: {
-                        Image(systemName: "info.circle")
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("子母畫面") {
-                        viewModel.togglePictureInPicture()
+                        Image(systemName: "chevron.down.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.85))
+                            .padding(8)
                     }
                 }
             }
-            .sheet(isPresented: $showGuide) {
-                safariExtensionGuide
-            }
+        }
+        .sheet(isPresented: $showGuide) {
+            safariExtensionGuide
         }
     }
 
-    private var addressBar: some View {
-        HStack(spacing: 8) {
+    private var compactToolbar: some View {
+        HStack(spacing: 6) {
+            Button {
+                viewModel.webView?.goBack()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .frame(width: 28, height: 32)
+            }
+
+            Button {
+                viewModel.webView?.goForward()
+            } label: {
+                Image(systemName: "chevron.right")
+                    .frame(width: 28, height: 32)
+            }
+
             TextField("輸入網址", text: $viewModel.urlString)
                 .textFieldStyle(.roundedBorder)
+                .font(.subheadline)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
@@ -45,34 +61,44 @@ struct ContentView: View {
                     viewModel.loadCurrentURL()
                 }
 
-            Button("前往") {
-                viewModel.loadCurrentURL()
-            }
-            .buttonStyle(.borderedProminent)
-
             Button {
                 viewModel.reload()
             } label: {
                 Image(systemName: "arrow.clockwise")
+                    .frame(width: 28, height: 32)
             }
-            .buttonStyle(.bordered)
+
+            Button {
+                viewModel.togglePictureInPicture()
+            } label: {
+                Image(systemName: "pip.enter")
+                    .frame(width: 28, height: 32)
+            }
+            .accessibilityLabel("子母畫面")
+
+            Button {
+                showGuide = true
+            } label: {
+                Image(systemName: "info.circle")
+                    .frame(width: 28, height: 32)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
     }
 
     private var statusStrip: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Toggle("過濾廣告", isOn: $viewModel.adFilterEnabled)
                 .toggleStyle(.button)
-                .font(.caption)
+                .controlSize(.mini)
                 .onChange(of: viewModel.adFilterEnabled) { _, _ in
                     viewModel.syncSettingsToPage()
                 }
 
             Toggle("背景播放", isOn: $viewModel.backgroundPlayEnabled)
                 .toggleStyle(.button)
-                .font(.caption)
+                .controlSize(.mini)
                 .onChange(of: viewModel.backgroundPlayEnabled) { _, _ in
                     viewModel.syncSettingsToPage()
                 }
@@ -83,6 +109,17 @@ struct ContentView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showControlsBar = false
+                }
+            } label: {
+                Image(systemName: "chevron.up")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 6)
@@ -91,16 +128,14 @@ struct ContentView: View {
     private var safariExtensionGuide: some View {
         NavigationStack {
             List {
-                Section("如何在 Safari 啟用擴充功能") {
-                    Text("1. 前往 iPhone 的「設定」→「App」→「Safari」。")
-                    Text("2. 點選「延伸功能」並開啟「影音增強器」。")
-                    Text("3. 將所有網站或指定網站權限設為「允許」。")
-                }
-                Section("背景播放與鎖屏控制說明") {
-                    Text("本 App 內建瀏覽器已啟用 AVAudioSession 背景音訊模式，可於鎖屏與控制中心控制播放、暫停與快轉。")
+                Section("功能說明") {
+                    Text("• 網頁廣告過濾：自動隱藏常見影音廣告容器並嘗試略過廣告按鈕。")
+                    Text("• 背景音訊播放：按電源鍵鎖屏或切換到其他 App 時會保持聲音播放。")
+                    Text("• 鎖屏控制：可在鎖定畫面與控制中心操作播放、暫停與快轉 10 秒。")
+                    Text("• 收起工具列：點選狀態列右側「▲」可隱藏上方網址列，獲得更大觀看空間。")
                 }
             }
-            .navigationTitle("使用說明")
+            .navigationTitle("影音增強瀏覽器")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完成") {

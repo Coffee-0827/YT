@@ -7,6 +7,10 @@ test("iOS project.yml references existing Swift, plist, and extension files", ()
   const requiredFiles = [
     "ios/project.yml",
     "ios/MediaEnhancerApp/Info.plist",
+    "ios/MediaEnhancerApp/LaunchScreen.storyboard",
+    "ios/MediaEnhancerApp/Assets.xcassets/Contents.json",
+    "ios/MediaEnhancerApp/Assets.xcassets/AppIcon.appiconset/Contents.json",
+    "ios/MediaEnhancerApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
     "ios/MediaEnhancerApp/MediaEnhancerApp.swift",
     "ios/MediaEnhancerApp/Audio/AudioSessionManager.swift",
     "ios/MediaEnhancerApp/Audio/NowPlayingManager.swift",
@@ -25,6 +29,8 @@ test("iOS project.yml references existing Swift, plist, and extension files", ()
   const appPlist = fs.readFileSync(path.resolve("ios/MediaEnhancerApp/Info.plist"), "utf8");
   assert.ok(appPlist.includes("<key>UIBackgroundModes</key>"));
   assert.ok(appPlist.includes("<string>audio</string>"));
+  assert.ok(appPlist.includes("<key>UILaunchStoryboardName</key>"));
+  assert.ok(appPlist.includes("<string>LaunchScreen</string>"));
 
   const extPlist = fs.readFileSync(path.resolve("ios/MediaEnhancerExtension/Info.plist"), "utf8");
   assert.ok(extPlist.includes("com.apple.Safari.web-extension"));
