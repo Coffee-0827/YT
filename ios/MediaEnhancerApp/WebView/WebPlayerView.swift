@@ -5,6 +5,7 @@ struct WebPlayerView: UIViewRepresentable {
     @ObservedObject var viewModel: WebPlayerViewModel
 
     private static let scriptNames = [
+        "adguard-yt-pruner",
         "browser-api",
         "ad-selectors",
         "ad-filter",

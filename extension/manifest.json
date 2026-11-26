@@ -26,6 +26,7 @@
         "http://*/*"
       ],
       "js": [
+        "src/content/adguard-yt-pruner.js",
         "src/shared/browser-api.js",
         "src/rules/ad-selectors.js",
         "src/content/ad-filter.js",

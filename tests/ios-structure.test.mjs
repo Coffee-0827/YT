@@ -29,13 +29,14 @@ test("iOS project.yml references existing Swift, plist, and extension files", ()
   const appPlist = fs.readFileSync(path.resolve("ios/MediaEnhancerApp/Info.plist"), "utf8");
   assert.ok(appPlist.includes("<key>UIBackgroundModes</key>"));
   assert.ok(appPlist.includes("<string>audio</string>"));
-  assert.ok(appPlist.includes("<key>UILaunchStoryboardName</key>"));
-  assert.ok(appPlist.includes("<string>LaunchScreen</string>"));
+
+  const projectYml = fs.readFileSync(path.resolve("ios/project.yml"), "utf8");
+  assert.ok(projectYml.includes("INFOPLIST_KEY_UILaunchScreen_Generation"));
+  assert.ok(projectYml.includes("adguard-yt-pruner.js"));
 
   const extPlist = fs.readFileSync(path.resolve("ios/MediaEnhancerExtension/Info.plist"), "utf8");
   assert.ok(extPlist.includes("com.apple.Safari.web-extension"));
 
-  const projectYml = fs.readFileSync(path.resolve("ios/project.yml"), "utf8");
   assert.ok(projectYml.includes("../extension/manifest.json"));
   assert.ok(projectYml.includes("AVFoundation.framework"));
   assert.ok(projectYml.includes("MediaPlayer.framework"));

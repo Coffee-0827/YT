@@ -8,6 +8,7 @@ const require = createRequire(import.meta.url);
 const rules = require("../extension/src/rules/ad-selectors.js");
 const adFilterMod = require("../extension/src/content/ad-filter.js");
 const mediaEnhancerMod = require("../extension/src/content/media-enhancer.js");
+const prunerMod = require("../extension/src/content/adguard-yt-pruner.js");
 
 function createMockElement(tagName, attrs = {}) {
   const attributes = new Map(Object.entries(attrs));
@@ -252,4 +253,25 @@ test("createMediaEnhancer configures MediaSession and handles visibilitychange",
   // Trigger visibilitychange while not user-paused
   listeners.get("visibilitychange")({});
   assert.equal(playCalled, 1);
+});
+
+test("pruneYouTubeObject strips player ads and feed adSlotRenderer while keeping content", () => {
+  const payload = {
+    videoDetails: { videoId: "abc123", title: "My Song" },
+    adPlacements: [{ adPlacementRenderer: {} }],
+    playerAds: [{ playerLegacyDesktopWatchAdsRenderer: {} }],
+    adSlots: [{ adSlotRenderer: {} }],
+    contents: [
+      { richItemRenderer: { content: { adSlotRenderer: { id: "ad1" } } } },
+      { richItemRenderer: { content: { videoRenderer: { videoId: "keepMe" } } } }
+    ]
+  };
+
+  const cleaned = prunerMod.pruneYouTubeObject(payload);
+  assert.equal(cleaned.adPlacements, undefined);
+  assert.equal(cleaned.playerAds, undefined);
+  assert.equal(cleaned.adSlots, undefined);
+  assert.equal(cleaned.videoDetails.videoId, "abc123");
+  assert.equal(cleaned.contents.length, 1);
+  assert.equal(cleaned.contents[0].richItemRenderer.content.videoRenderer.videoId, "keepMe");
 });
