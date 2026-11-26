@@ -70,5 +70,23 @@
     "action": {
       "type": "block"
     }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/youtubei/v1/player/ad_break.*",
+      "resource-type": ["raw", "script"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/ptracking.*",
+      "resource-type": ["raw", "script", "image"]
+    },
+    "action": {
+      "type": "block"
+    }
   }
 ]

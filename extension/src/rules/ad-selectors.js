@@ -26,6 +26,7 @@
 
   const FEED_CARD_SELECTORS = Object.freeze([
     "ytm-rich-item-renderer",
+    "ytm-rich-section-renderer",
     "ytm-video-with-context-renderer",
     "ytm-item-section-renderer",
     "ytd-rich-item-renderer",

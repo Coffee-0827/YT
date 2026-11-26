@@ -30,9 +30,31 @@
     };
   }
 
+  function applyVisibilityPatch(doc) {
+    if (!doc || doc.__wmeVisibilityPatched) return;
+    doc.__wmeVisibilityPatched = true;
+    try {
+      Object.defineProperty(doc, "hidden", {
+        configurable: true,
+        get: () => false
+      });
+      Object.defineProperty(doc, "visibilityState", {
+        configurable: true,
+        get: () => "visible"
+      });
+    } catch {
+      // Some browsers disallow redefining document.hidden
+    }
+  }
+
+  // Apply synchronously at document_start so page scripts never observe hidden=true
+  if (typeof root.document !== "undefined") {
+    applyVisibilityPatch(root.document);
+  }
+
   /**
    * Enhances HTML5 media elements with Media Session controls, PiP helper,
-   * and visibility-change playback continuity.
+   * and seamless background playlist track transitions.
    */
   function createMediaEnhancer(win, doc, initialOptions = {}) {
     let options = {
@@ -43,7 +65,6 @@
     let started = false;
     let userPaused = false;
     let lastActiveMedia = null;
-    let visibilityPatchApplied = false;
 
     function notifyNativeHost(state) {
       try {
@@ -53,67 +74,62 @@
       }
     }
 
-    function syncMediaSession(media) {
+    function syncMediaSession(media, extra = {}) {
       const nav = win?.navigator;
-      if (!nav?.mediaSession || !media) return false;
-
       const meta = extractPageMetadata(doc, win);
-      if (typeof win.MediaMetadata === "function") {
-        nav.mediaSession.metadata = new win.MediaMetadata(meta);
+
+      if (nav?.mediaSession && media) {
+        if (typeof win.MediaMetadata === "function") {
+          nav.mediaSession.metadata = new win.MediaMetadata(meta);
+        }
+
+        const safeSetHandler = (action, handler) => {
+          try {
+            nav.mediaSession.setActionHandler(action, handler);
+          } catch {
+            // Action not supported on this browser version
+          }
+        };
+
+        safeSetHandler("play", () => {
+          userPaused = false;
+          media.play?.();
+        });
+        safeSetHandler("pause", () => {
+          userPaused = true;
+          media.pause?.();
+        });
+        safeSetHandler("seekbackward", (details) => {
+          const offset = details?.seekOffset || DEFAULT_SEEK_OFFSET_SECONDS;
+          media.currentTime = Math.max(0, (media.currentTime || 0) - offset);
+        });
+        safeSetHandler("seekforward", (details) => {
+          const offset = details?.seekOffset || DEFAULT_SEEK_OFFSET_SECONDS;
+          const duration = Number.isFinite(media.duration) ? media.duration : Infinity;
+          media.currentTime = Math.min(duration, (media.currentTime || 0) + offset);
+        });
       }
 
-      const safeSetHandler = (action, handler) => {
-        try {
-          nav.mediaSession.setActionHandler(action, handler);
-        } catch {
-          // Action not supported on this browser version
-        }
-      };
+      if (media) {
+        notifyNativeHost({
+          title: meta.title,
+          artist: meta.artist,
+          isPlaying: !media.paused && !media.ended,
+          transitioning: Boolean(extra.transitioning),
+          currentTime: media.currentTime || 0,
+          duration: Number.isFinite(media.duration) ? media.duration : 0
+        });
+      }
 
-      safeSetHandler("play", () => {
-        userPaused = false;
-        media.play?.();
-      });
-      safeSetHandler("pause", () => {
-        userPaused = true;
-        media.pause?.();
-      });
-      safeSetHandler("seekbackward", (details) => {
-        const offset = details?.seekOffset || DEFAULT_SEEK_OFFSET_SECONDS;
-        media.currentTime = Math.max(0, (media.currentTime || 0) - offset);
-      });
-      safeSetHandler("seekforward", (details) => {
-        const offset = details?.seekOffset || DEFAULT_SEEK_OFFSET_SECONDS;
-        const duration = Number.isFinite(media.duration) ? media.duration : Infinity;
-        media.currentTime = Math.min(duration, (media.currentTime || 0) + offset);
-      });
-
-      notifyNativeHost({
-        title: meta.title,
-        artist: meta.artist,
-        isPlaying: !media.paused,
-        currentTime: media.currentTime || 0,
-        duration: Number.isFinite(media.duration) ? media.duration : 0
-      });
-
-      return true;
+      return Boolean(nav?.mediaSession && media);
     }
 
-    function patchVisibilityApi() {
-      if (visibilityPatchApplied || !doc || !options.backgroundPlayEnabled) return;
-      visibilityPatchApplied = true;
-
-      try {
-        Object.defineProperty(doc, "hidden", {
-          configurable: true,
-          get: () => false
+    function tryResumeIfBackgrounded(media) {
+      if (!options.backgroundPlayEnabled || !media || userPaused) return;
+      if (media.paused && !media.ended) {
+        Promise.resolve(media.play?.()).catch(() => {
+          // Playback resume may wait for readyState >= 2
         });
-        Object.defineProperty(doc, "visibilityState", {
-          configurable: true,
-          get: () => "visible"
-        });
-      } catch {
-        // Some browsers disallow redefining document.hidden
       }
     }
 
@@ -127,11 +143,7 @@
       const media = lastActiveMedia || findPrimaryMedia(doc);
       if (!media) return;
 
-      if (!userPaused && media.paused) {
-        Promise.resolve(media.play?.()).catch(() => {
-          // Playback resume may require active audio session / PiP
-        });
-      }
+      tryResumeIfBackgrounded(media);
       syncMediaSession(media);
     }
 
@@ -141,12 +153,37 @@
         return;
       }
       lastActiveMedia = target;
-      if (event.type === "play") {
-        userPaused = false;
-      } else if (event.type === "pause" && !doc?.hidden) {
-        userPaused = true;
+
+      switch (event.type) {
+        case "play":
+        case "playing":
+          userPaused = false;
+          syncMediaSession(target, { transitioning: false });
+          break;
+        case "pause":
+          // Only mark as user-initiated pause if the app is actually in foreground
+          if (!doc?.hidden) {
+            userPaused = true;
+          } else {
+            tryResumeIfBackgrounded(target);
+          }
+          syncMediaSession(target);
+          break;
+        case "ended":
+        case "waiting":
+        case "loadstart":
+        case "emptied":
+          syncMediaSession(target, { transitioning: !userPaused });
+          break;
+        case "canplay":
+        case "loadeddata":
+        case "loadedmetadata":
+          tryResumeIfBackgrounded(target);
+          syncMediaSession(target, { transitioning: false });
+          break;
+        default:
+          syncMediaSession(target);
       }
-      syncMediaSession(target);
     }
 
     async function requestPictureInPicture() {
@@ -175,18 +212,31 @@
       return false;
     }
 
+    const mediaEventTypes = [
+      "play",
+      "playing",
+      "pause",
+      "ended",
+      "waiting",
+      "loadstart",
+      "emptied",
+      "canplay",
+      "loadeddata",
+      "loadedmetadata"
+    ];
+
     function start() {
       if (started || !doc) return;
       started = true;
 
       if (options.backgroundPlayEnabled) {
-        patchVisibilityApi();
+        applyVisibilityPatch(doc);
       }
 
       doc.addEventListener?.("visibilitychange", handleVisibilityChange, true);
-      doc.addEventListener?.("play", handleMediaEvent, true);
-      doc.addEventListener?.("pause", handleMediaEvent, true);
-      doc.addEventListener?.("loadedmetadata", handleMediaEvent, true);
+      for (const evt of mediaEventTypes) {
+        doc.addEventListener?.(evt, handleMediaEvent, true);
+      }
 
       const media = findPrimaryMedia(doc);
       if (media) {
@@ -199,15 +249,15 @@
       if (!started || !doc) return;
       started = false;
       doc.removeEventListener?.("visibilitychange", handleVisibilityChange, true);
-      doc.removeEventListener?.("play", handleMediaEvent, true);
-      doc.removeEventListener?.("pause", handleMediaEvent, true);
-      doc.removeEventListener?.("loadedmetadata", handleMediaEvent, true);
+      for (const evt of mediaEventTypes) {
+        doc.removeEventListener?.(evt, handleMediaEvent, true);
+      }
     }
 
     function updateOptions(nextOptions) {
       options = { ...options, ...nextOptions };
       if (options.backgroundPlayEnabled) {
-        patchVisibilityApi();
+        applyVisibilityPatch(doc);
       }
     }
 

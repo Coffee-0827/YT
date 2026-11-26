@@ -89,6 +89,20 @@ final class WebPlayerViewModel: NSObject, ObservableObject {
               if (m) m.currentTime = m.currentTime + 10;
             })();
             """
+        case "nextTrack":
+            js = """
+            (function() {
+              const btn = document.querySelector('.ytp-next-button, button[aria-label*="下一個"], button[aria-label*="Next"]');
+              if (btn) btn.click();
+            })();
+            """
+        case "previousTrack":
+            js = """
+            (function() {
+              const btn = document.querySelector('.ytp-prev-button, button[aria-label*="上一個"], button[aria-label*="Previous"]');
+              if (btn) btn.click();
+            })();
+            """
         default:
             return
         }
@@ -112,13 +126,19 @@ extension WebPlayerViewModel: WKScriptMessageHandler {
         let title = body["title"] as? String ?? "網頁影音"
         let artist = body["artist"] as? String ?? "Web Media"
         let playing = body["isPlaying"] as? Bool ?? false
+        let transitioning = body["transitioning"] as? Bool ?? false
         let currentTime = body["currentTime"] as? Double ?? 0
         let duration = body["duration"] as? Double ?? 0
 
         DispatchQueue.main.async {
             self.nowPlayingTitle = title
             self.isPlaying = playing
-            if playing && !AudioSessionManager.shared.isConfigured {
+            if transitioning {
+                AudioSessionManager.shared.beginTransitionBackgroundTask()
+            } else if playing {
+                AudioSessionManager.shared.endTransitionBackgroundTask()
+            }
+            if (playing || transitioning) && !AudioSessionManager.shared.isConfigured {
                 AudioSessionManager.shared.configureForBackgroundPlayback()
             }
             NowPlayingManager.shared.updateNowPlaying(

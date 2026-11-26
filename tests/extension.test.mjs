@@ -274,4 +274,11 @@ test("pruneYouTubeObject strips player ads and feed adSlotRenderer while keeping
   assert.equal(cleaned.videoDetails.videoId, "abc123");
   assert.equal(cleaned.contents.length, 1);
   assert.equal(cleaned.contents[0].richItemRenderer.content.videoRenderer.videoId, "keepMe");
+
+  const xssiText = `)]}'\n${JSON.stringify({ adPlacements: [{}], videoDetails: { videoId: "xyz" } })}`;
+  const prunedText = prunerMod.pruneJsonText(xssiText, JSON.parse);
+  assert.ok(prunedText.startsWith(")]}'\n"));
+  const reparsed = JSON.parse(prunedText.slice(5));
+  assert.equal(reparsed.adPlacements, undefined);
+  assert.equal(reparsed.videoDetails.videoId, "xyz");
 });

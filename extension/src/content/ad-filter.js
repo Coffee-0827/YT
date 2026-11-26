@@ -101,7 +101,10 @@
             const badges = card.querySelectorAll("span, ytm-badge-supported-renderer, .badge-style-type-ad");
             for (const badge of badges) {
               const txt = (badge.textContent || "").trim();
-              if (rules.SPONSORED_BADGE_TEXTS.includes(txt)) {
+              if (
+                rules.SPONSORED_BADGE_TEXTS.includes(txt) ||
+                txt.includes("贊助商廣告")
+              ) {
                 hasSponsoredBadge = true;
                 break;
               }
@@ -142,6 +145,8 @@
           }
           if (Number.isFinite(video.duration) && video.duration > 0.2 && video.currentTime < video.duration - 0.15) {
             video.currentTime = video.duration - 0.1;
+          } else if (video.seekable && video.seekable.length > 0) {
+            video.currentTime = video.seekable.end(0);
           }
           return true;
         }
@@ -165,9 +170,9 @@
       if (scheduled) return;
       scheduled = true;
       const scheduleFn =
-        typeof root.requestAnimationFrame === "function"
+        !doc?.hidden && typeof root.requestAnimationFrame === "function"
           ? root.requestAnimationFrame
-          : (fn) => setTimeout(fn, 16);
+          : (fn) => setTimeout(fn, 50);
 
       scheduleFn(() => {
         scheduled = false;

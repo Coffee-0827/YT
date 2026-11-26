@@ -47,6 +47,18 @@ final class NowPlayingManager {
             self?.onRemoteCommand?("seekForward")
             return .success
         }
+
+        center.nextTrackCommand.isEnabled = true
+        center.nextTrackCommand.addTarget { [weak self] _ in
+            self?.onRemoteCommand?("nextTrack")
+            return .success
+        }
+
+        center.previousTrackCommand.isEnabled = true
+        center.previousTrackCommand.addTarget { [weak self] _ in
+            self?.onRemoteCommand?("previousTrack")
+            return .success
+        }
     }
 
     func updateNowPlaying(
