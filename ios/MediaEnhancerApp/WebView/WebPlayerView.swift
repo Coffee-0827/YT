@@ -1,25 +1,32 @@
 import SwiftUI
 import WebKit
 
-/// Wraps WKWebView with media playback capabilities and injected enhancement scripts.
-/// The view fills the entire screen edge-to-edge including under the status bar and home indicator.
 struct WebPlayerView: UIViewRepresentable {
     @ObservedObject var viewModel: WebPlayerViewModel
 
+    // Scripts injected in order at document-start
     private static let scriptNames = [
         "browser-api",
         "ad-selectors",
         "ad-filter",
+        "layout-enhancer",   // viewport-fit + safe-area CSS + feed-ad block
         "media-enhancer",
         "main"
     ]
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+
+        // ── Media settings ────────────────────────────────────────────────
         config.allowsInlineMediaPlayback = true
         config.allowsPictureInPictureMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
+        // Allow larger disk and memory cache so videos buffer less
+        let websiteDataStore = WKWebsiteDataStore.default()
+        config.websiteDataStore = websiteDataStore
+
+        // ── Script injection ───────────────────────────────────────────────
         let controller = WKUserContentController()
         controller.add(viewModel, name: "mediaState")
 
@@ -28,27 +35,28 @@ struct WebPlayerView: UIViewRepresentable {
                 let userScript = WKUserScript(
                     source: source,
                     injectionTime: .atDocumentStart,
-                    forMainFrameOnly: true
+                    forMainFrameOnly: false   // also run in iframes (YouTube uses them)
                 )
                 controller.addUserScript(userScript)
             }
         }
         config.userContentController = controller
 
+        // ── WebView setup ─────────────────────────────────────────────────
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
 
-        // KEY: Tell the scroll view NOT to auto-adjust insets.
-        // This lets the web content fill under the status bar and home indicator
-        // exactly like the native YouTube app.
+        // KEY: .never stops iOS adding insets for the status bar / home
+        // indicator, letting our injected CSS handle safe areas via
+        // env(safe-area-inset-*) so the page fills the full screen.
         webView.scrollView.contentInsetAdjustmentBehavior = .never
 
-        // Extend the webView drawing under the system chrome so the page
-        // background colour reaches the edges rather than leaving black bars.
+        // Transparent background so our black body style shows through
         webView.isOpaque = false
-        webView.backgroundColor = .black
+        webView.backgroundColor = UIColor(red: 0.059, green: 0.059, blue: 0.059, alpha: 1)
+        webView.scrollView.backgroundColor = .clear
 
-        // Proper mobile Safari UA so YouTube serves the full mobile layout
+        // Real Safari UA → YouTube serves standard mobile layout & HLS streams
         webView.customUserAgent =
             "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) " +
             "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
