@@ -3,30 +3,28 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = WebPlayerViewModel()
     @State private var showGuide = false
-    @State private var showToolbar = false   // hidden by default → full-screen first launch
+    @State private var showToolbar = false
+
+    private let youtubeDarkBackground = Color(red: 15.0 / 255.0, green: 15.0 / 255.0, blue: 15.0 / 255.0)
 
     var body: some View {
-        // The ZStack lets the WebView fill the ENTIRE screen (including under the
-        // status bar and home indicator), while the floating toolbar overlays on top.
         ZStack(alignment: .bottom) {
+            youtubeDarkBackground
+                .ignoresSafeArea()
 
-            // ── Full-screen WebView ──────────────────────────────────────────
+            // Keep top below Dynamic Island/status bar while extending seamlessly to bottom edge
             WebPlayerView(viewModel: viewModel)
-                .ignoresSafeArea()          // extend to all 4 edges
+                .ignoresSafeArea(.container, edges: .bottom)
 
-            // ── Floating toolbar (shown/hidden by swipe or button) ───────────
             if showToolbar {
                 floatingToolbar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
-            // ── Tiny handle at the bottom to reveal toolbar when hidden ──────
-            if !showToolbar {
+            } else {
                 handlePill
                     .transition(.opacity)
             }
         }
-        // Swipe up → reveal toolbar; swipe down → hide toolbar
+        .preferredColorScheme(.dark)
         .gesture(
             DragGesture(minimumDistance: 20)
                 .onEnded { value in
@@ -44,22 +42,16 @@ struct ContentView: View {
         }
     }
 
-    // ── Handle pill that shows at the very bottom edge when toolbar is hidden ──
     private var handlePill: some View {
-        VStack {
-            Spacer()
-            RoundedRectangle(cornerRadius: 3)
-                .fill(.white.opacity(0.35))
-                .frame(width: 36, height: 5)
-                .padding(.bottom, 8)
-        }
-        .allowsHitTesting(false)
+        RoundedRectangle(cornerRadius: 3)
+            .fill(.white.opacity(0.35))
+            .frame(width: 36, height: 5)
+            .padding(.bottom, 6)
+            .allowsHitTesting(false)
     }
 
-    // ── Floating toolbar with frosted-glass background ────────────────────────
     private var floatingToolbar: some View {
         VStack(spacing: 0) {
-            // Address / navigation row
             HStack(spacing: 6) {
                 Button { viewModel.webView?.goBack() } label: {
                     Image(systemName: "chevron.left").frame(width: 30, height: 36)
@@ -89,7 +81,6 @@ struct ContentView: View {
             .padding(.horizontal, 10)
             .padding(.top, 10)
 
-            // Toggle / status row
             HStack(spacing: 8) {
                 Toggle("廣告過濾", isOn: $viewModel.adFilterEnabled)
                     .toggleStyle(.button)
@@ -111,7 +102,6 @@ struct ContentView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                // Close / hide toolbar button
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showToolbar = false
@@ -132,11 +122,10 @@ struct ContentView: View {
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
         .padding(.horizontal, 10)
-        .padding(.bottom, 24)   // above home indicator
+        .padding(.bottom, 16)
         .shadow(color: .black.opacity(0.4), radius: 12, x: 0, y: 4)
     }
 
-    // ── Usage guide sheet ─────────────────────────────────────────────────────
     private var safariExtensionGuide: some View {
         NavigationStack {
             List {
@@ -145,7 +134,7 @@ struct ContentView: View {
                     Text("• 在工具列往下滑 / 點「∨」→ 收起工具列，恢復完整全螢幕視野。")
                 }
                 Section("功能說明") {
-                    Text("• 廣告過濾：自動隱藏常見影音廣告元素並嘗試略過廣告按鈕。")
+                    Text("• 廣告過濾：已整合網路層封鎖與網頁層動態跳過，過濾首頁贊助廣告與播放清單影片廣告。")
                     Text("• 背景播放：鎖屏或切換 App 後繼續播放，鎖屏畫面可操作。")
                     Text("• 子母畫面（PiP）：點工具列中的 PiP 按鈕，影片縮小浮動顯示。")
                 }

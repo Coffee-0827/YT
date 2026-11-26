@@ -37,6 +37,15 @@
   },
   {
     "trigger": {
+      "url-filter": ".*2mdn\\.net/.*",
+      "resource-type": ["script", "image", "raw", "media"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
       "url-filter": ".*youtube\\.com/api/stats/ads.*",
       "resource-type": ["raw", "script"]
     },
@@ -48,6 +57,15 @@
     "trigger": {
       "url-filter": ".*youtube\\.com/pagead/.*",
       "resource-type": ["raw", "script", "image"]
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": ".*youtube\\.com/get_midroll_.*",
+      "resource-type": ["raw", "script"]
     },
     "action": {
       "type": "block"

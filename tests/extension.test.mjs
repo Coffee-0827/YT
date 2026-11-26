@@ -126,6 +126,53 @@ test("createAdFilter injects style, hides ad elements, and clicks skip button", 
   assert.equal(res2.hiddenCount, 1);
 });
 
+test("createAdFilter hides feed cards with sponsored badge and fast-forwards .ad-showing", () => {
+  const badge = createMockElement("span");
+  badge.textContent = "贊助商廣告";
+
+  const feedCard = createMockElement("ytm-rich-item-renderer");
+  feedCard.querySelector = () => null;
+  feedCard.querySelectorAll = () => [badge];
+
+  const adVideo = {
+    tagName: "VIDEO",
+    muted: false,
+    playbackRate: 1,
+    currentTime: 2,
+    duration: 30
+  };
+  const adPlayer = createMockElement("div");
+  adPlayer.querySelector = (sel) => (sel === "video" ? adVideo : null);
+
+  const mockDoc = {
+    head: createMockElement("head"),
+    documentElement: createMockElement("html"),
+    createElement: (tag) => createMockElement(tag),
+    getElementById: () => null,
+    querySelectorAll(sel) {
+      if (sel.includes("ytm-rich-item-renderer")) return [feedCard];
+      return [];
+    },
+    querySelector(sel) {
+      if (sel.includes(".ad-showing")) return adPlayer;
+      return null;
+    }
+  };
+
+  const filter = adFilterMod.createAdFilter(mockDoc, {
+    adFilterEnabled: true,
+    autoSkipEnabled: true
+  });
+
+  const res = filter.scanOnce();
+  assert.equal(res.hiddenCount, 1);
+  assert.equal(res.skipped, true);
+  assert.equal(feedCard.getAttribute("data-wme-hidden"), "1");
+  assert.equal(adVideo.muted, true);
+  assert.equal(adVideo.playbackRate, 16);
+  assert.equal(adVideo.currentTime, 29.9);
+});
+
 test("createMediaEnhancer configures MediaSession and handles visibilitychange", () => {
   let playCalled = 0;
   let paused = true;

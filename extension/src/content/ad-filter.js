@@ -25,6 +25,20 @@
     return true;
   }
 
+  function hideNode(node) {
+    if (!node || node.getAttribute?.("data-wme-hidden") === "1") {
+      return false;
+    }
+    if (node.style) {
+      node.style.setProperty("display", "none", "important");
+      node.style.setProperty("height", "0", "important");
+      node.style.setProperty("margin", "0", "important");
+      node.style.setProperty("padding", "0", "important");
+    }
+    node.setAttribute?.("data-wme-hidden", "1");
+    return true;
+  }
+
   /**
    * Creates an ad-element filter controller bound to a document instance.
    */
@@ -68,16 +82,36 @@
       const nodes = doc.querySelectorAll(selector);
 
       for (const node of nodes) {
-        if (node.getAttribute && node.getAttribute("data-wme-hidden") === "1") {
-          continue;
+        if (hideNode(node)) {
+          newlyHidden += 1;
         }
-        if (node.style) {
-          node.style.setProperty("display", "none", "important");
+      }
+
+      // Hide entire feed card wrappers that contain ad-slot-renderer or sponsored text badges
+      if (Array.isArray(rules.FEED_CARD_SELECTORS) && rules.FEED_CARD_SELECTORS.length > 0) {
+        const cards = doc.querySelectorAll(rules.FEED_CARD_SELECTORS.join(","));
+        for (const card of cards) {
+          if (card.getAttribute?.("data-wme-hidden") === "1") continue;
+
+          const hasAdChild = Boolean(
+            card.querySelector?.("ad-slot-renderer, ytm-ad-slot-renderer, ytd-ad-slot-renderer, a[href*='googleadservices.com']")
+          );
+          let hasSponsoredBadge = false;
+          if (!hasAdChild && card.querySelectorAll) {
+            const badges = card.querySelectorAll("span, ytm-badge-supported-renderer, .badge-style-type-ad");
+            for (const badge of badges) {
+              const txt = (badge.textContent || "").trim();
+              if (rules.SPONSORED_BADGE_TEXTS.includes(txt)) {
+                hasSponsoredBadge = true;
+                break;
+              }
+            }
+          }
+
+          if ((hasAdChild || hasSponsoredBadge) && hideNode(card)) {
+            newlyHidden += 1;
+          }
         }
-        if (node.setAttribute) {
-          node.setAttribute("data-wme-hidden", "1");
-        }
-        newlyHidden += 1;
       }
 
       hiddenCount += newlyHidden;
@@ -99,10 +133,15 @@
       const adContainer = doc.querySelector(adContainerSelector);
       if (adContainer) {
         const video = adContainer.querySelector?.("video") || doc.querySelector("video");
-        if (video && Number.isFinite(video.duration) && video.duration > 0) {
+        if (video) {
           video.muted = true;
-          if (video.currentTime < video.duration - 0.1) {
-            video.currentTime = video.duration;
+          try {
+            video.playbackRate = 16;
+          } catch {
+            // Ignore playbackRate clamp in restricted players
+          }
+          if (Number.isFinite(video.duration) && video.duration > 0.2 && video.currentTime < video.duration - 0.15) {
+            video.currentTime = video.duration - 0.1;
           }
           return true;
         }
@@ -146,7 +185,9 @@
       });
       observer.observe(doc.documentElement, {
         childList: true,
-        subtree: true
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class"]
       });
     }
 

@@ -4,77 +4,84 @@ import WebKit
 struct WebPlayerView: UIViewRepresentable {
     @ObservedObject var viewModel: WebPlayerViewModel
 
-    // Scripts injected in order at document-start
     private static let scriptNames = [
         "browser-api",
         "ad-selectors",
         "ad-filter",
-        "layout-enhancer",   // viewport-fit + safe-area CSS + feed-ad block
+        "layout-enhancer",
         "media-enhancer",
         "main"
     ]
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-
-        // ── Media settings ────────────────────────────────────────────────
         config.allowsInlineMediaPlayback = true
         config.allowsPictureInPictureMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        config.allowsAirPlayForMediaPlayback = true
+        config.websiteDataStore = .default()
 
-        // Allow larger disk and memory cache so videos buffer less
-        let websiteDataStore = WKWebsiteDataStore.default()
-        config.websiteDataStore = websiteDataStore
-
-        // ── Script injection ───────────────────────────────────────────────
         let controller = WKUserContentController()
         controller.add(viewModel, name: "mediaState")
 
         for scriptName in Self.scriptNames {
-            if let source = loadBundledScript(named: scriptName) {
+            if let source = loadBundledText(named: scriptName, ext: "js") {
                 let userScript = WKUserScript(
                     source: source,
                     injectionTime: .atDocumentStart,
-                    forMainFrameOnly: false   // also run in iframes (YouTube uses them)
+                    forMainFrameOnly: false
                 )
                 controller.addUserScript(userScript)
             }
         }
         config.userContentController = controller
 
-        // ── WebView setup ─────────────────────────────────────────────────
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
-
-        // KEY: .never stops iOS adding insets for the status bar / home
-        // indicator, letting our injected CSS handle safe areas via
-        // env(safe-area-inset-*) so the page fills the full screen.
         webView.scrollView.contentInsetAdjustmentBehavior = .never
-
-        // Transparent background so our black body style shows through
         webView.isOpaque = false
-        webView.backgroundColor = UIColor(red: 0.059, green: 0.059, blue: 0.059, alpha: 1)
-        webView.scrollView.backgroundColor = .clear
 
-        // Real Safari UA → YouTube serves standard mobile layout & HLS streams
+        let ytDark = UIColor(red: 15.0 / 255.0, green: 15.0 / 255.0, blue: 15.0 / 255.0, alpha: 1.0)
+        webView.backgroundColor = ytDark
+        webView.scrollView.backgroundColor = ytDark
+
         webView.customUserAgent =
             "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) " +
             "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
             "Version/18.0 Mobile/15E148 Safari/604.1"
 
         viewModel.webView = webView
-        viewModel.loadCurrentURL()
+        attachContentBlockerAndLoad(webView: webView, controller: controller)
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
-    private func loadBundledScript(named name: String) -> String? {
+    private func attachContentBlockerAndLoad(webView: WKWebView, controller: WKUserContentController) {
+        guard let rulesJson = loadBundledText(named: "content-blocker", ext: "json") else {
+            viewModel.loadCurrentURL()
+            return
+        }
+
+        WKContentRuleListStore.default().compileContentRuleList(
+            forIdentifier: "YouTubeAdBlockerRules",
+            encodedContentRuleList: rulesJson
+        ) { ruleList, _ in
+            DispatchQueue.main.async {
+                if let ruleList {
+                    controller.add(ruleList)
+                }
+                viewModel.loadCurrentURL()
+            }
+        }
+    }
+
+    private func loadBundledText(named name: String, ext: String) -> String? {
         guard let url = Bundle.main.url(
             forResource: name,
-            withExtension: "js",
+            withExtension: ext,
             subdirectory: "SharedScripts"
-        ) ?? Bundle.main.url(forResource: name, withExtension: "js") else {
+        ) ?? Bundle.main.url(forResource: name, withExtension: ext) else {
             return nil
         }
         return try? String(contentsOf: url, encoding: .utf8)

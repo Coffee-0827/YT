@@ -23,17 +23,21 @@ targets:
         buildPhase: resources
       - path: ../extension/src/content/ad-filter.js
         buildPhase: resources
+      - path: ../extension/src/content/layout-enhancer.js
+        buildPhase: resources
       - path: ../extension/src/content/media-enhancer.js
         buildPhase: resources
       - path: ../extension/src/content/main.js
+        buildPhase: resources
+      - path: ../extension/rules/content-blocker.json
         buildPhase: resources
     info:
       path: MediaEnhancerApp/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.personal.mediaenhancer
-        MARKETING_VERSION: "1.0.3"
-        CURRENT_PROJECT_VERSION: "4"
+        MARKETING_VERSION: "1.0.4"
+        CURRENT_PROJECT_VERSION: "5"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGNING_ALLOWED: "NO"
     dependencies:

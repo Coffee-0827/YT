@@ -118,7 +118,7 @@ extension WebPlayerViewModel: WKScriptMessageHandler {
         DispatchQueue.main.async {
             self.nowPlayingTitle = title
             self.isPlaying = playing
-            if playing {
+            if playing && !AudioSessionManager.shared.isConfigured {
                 AudioSessionManager.shared.configureForBackgroundPlayback()
             }
             NowPlayingManager.shared.updateNowPlaying(
